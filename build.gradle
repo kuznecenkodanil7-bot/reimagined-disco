@@ -1,89 +1,52 @@
-package ru.nauzer.visuals.render;
+plugins {
+    id 'fabric-loom' version '1.14-SNAPSHOT'
+    id 'maven-publish'
+}
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.particle.ParticleTypes;
-import ru.nauzer.visuals.NauzerVisualsClient;
-import ru.nauzer.visuals.feature.ModuleRegistry;
+version = project.mod_version
+group = project.maven_group
 
-import java.util.Random;
+base {
+    archivesName = project.archives_base_name
+}
 
-public final class VisualEffects {
-    private static final Random RANDOM = new Random();
-    private static Double oldGamma;
-    private static int particleDelay;
+loom {
+    splitEnvironmentSourceSets()
 
-    private VisualEffects() {
-    }
-
-    public static void tick(MinecraftClient client) {
-        if (client == null || client.player == null || client.world == null) {
-            return;
-        }
-
-        applyFullbright(client);
-        applySelfGlow(client);
-        tickTrail(client);
-    }
-
-    public static void restore(MinecraftClient client) {
-        if (client == null || client.options == null) return;
-        if (oldGamma != null) {
-            client.options.getGamma().setValue(oldGamma);
-            oldGamma = null;
-        }
-        if (client.player != null) {
-            client.player.setGlowing(false);
+    mods {
+        nauzervisuals {
+            sourceSet sourceSets.client
         }
     }
+}
 
-    public static void spawnHitSparks(Entity entity) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null || entity == null || !ModuleRegistry.enabled("hit_sparks")) return;
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
 
-        for (int i = 0; i < 18; i++) {
-            double x = entity.getX() + (RANDOM.nextDouble() - 0.5) * entity.getWidth();
-            double y = entity.getY() + entity.getHeight() * 0.5 + (RANDOM.nextDouble() - 0.5) * entity.getHeight();
-            double z = entity.getZ() + (RANDOM.nextDouble() - 0.5) * entity.getWidth();
-            double vx = (RANDOM.nextDouble() - 0.5) * 0.08;
-            double vy = RANDOM.nextDouble() * 0.07;
-            double vz = (RANDOM.nextDouble() - 0.5) * 0.08;
-            client.world.addParticle(ParticleTypes.CRIT, x, y, z, vx, vy, vz);
-        }
+processResources {
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
     }
+}
 
-    private static void applyFullbright(MinecraftClient client) {
-        if (ModuleRegistry.enabled("fullbright")) {
-            if (oldGamma == null) {
-                oldGamma = client.options.getGamma().getValue();
-            }
-            client.options.getGamma().setValue(16.0D);
-        } else if (oldGamma != null) {
-            client.options.getGamma().setValue(oldGamma);
-            oldGamma = null;
-        }
-    }
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = 'UTF-8'
+}
 
-    private static void applySelfGlow(MinecraftClient client) {
-        if (client.player != null) {
-            client.player.setGlowing(ModuleRegistry.enabled("self_glow"));
-        }
-    }
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+    withSourcesJar()
+}
 
-    private static void tickTrail(MinecraftClient client) {
-        if (!ModuleRegistry.enabled("trail_particles")) return;
-        if (ModuleRegistry.enabled("performance_mode")) {
-            particleDelay++;
-            int divider = Math.max(2, 8 - NauzerVisualsClient.CONFIG.particleRate);
-            if (particleDelay % divider != 0) return;
-        }
-
-        int amount = Math.max(1, Math.min(10, NauzerVisualsClient.CONFIG.particleRate));
-        for (int i = 0; i < amount; i++) {
-            double x = client.player.getX() + (RANDOM.nextDouble() - 0.5) * 0.55;
-            double y = client.player.getY() + 0.15 + RANDOM.nextDouble() * 0.35;
-            double z = client.player.getZ() + (RANDOM.nextDouble() - 0.5) * 0.55;
-            client.world.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.012, 0.0);
-        }
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.archives_base_name}" }
     }
 }
