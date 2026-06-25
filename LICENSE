@@ -1,0 +1,36 @@
+package ru.nauzer.visuals.util;
+
+public final class ColorUtil {
+    private ColorUtil() {
+    }
+
+    public static int lerp(int start, int end, float t) {
+        t = Math.max(0.0f, Math.min(1.0f, t));
+        int a1 = (start >>> 24) & 255;
+        int r1 = (start >>> 16) & 255;
+        int g1 = (start >>> 8) & 255;
+        int b1 = start & 255;
+        int a2 = (end >>> 24) & 255;
+        int r2 = (end >>> 16) & 255;
+        int g2 = (end >>> 8) & 255;
+        int b2 = end & 255;
+        int a = (int) (a1 + (a2 - a1) * t);
+        int r = (int) (r1 + (r2 - r1) * t);
+        int g = (int) (g1 + (g2 - g1) * t);
+        int b = (int) (b1 + (b2 - b1) * t);
+        return argb(a, r, g, b);
+    }
+
+    public static int argb(int a, int r, int g, int b) {
+        return ((a & 255) << 24) | ((r & 255) << 16) | ((g & 255) << 8) | (b & 255);
+    }
+
+    public static int withAlpha(int color, int alpha) {
+        return (color & 0x00FFFFFF) | ((alpha & 255) << 24);
+    }
+
+    public static int pulse(int start, int end, long millis, float speed) {
+        float phase = (float) ((Math.sin(millis / speed) + 1.0) / 2.0);
+        return lerp(start, end, phase);
+    }
+}

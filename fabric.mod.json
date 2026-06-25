@@ -1,0 +1,71 @@
+package ru.nauzer.visuals.feature;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+
+public final class ModuleRegistry {
+    private static final List<VisualModule> MODULES = new ArrayList<>();
+    private static final Map<Category, List<VisualModule>> BY_CATEGORY = new EnumMap<>(Category.class);
+
+    private ModuleRegistry() {
+    }
+
+    public static void bootstrap() {
+        if (!MODULES.isEmpty()) return;
+
+        register(new VisualModule("clean_hud", "Clean HUD", "Красивый минималистичный HUD с панелью состояния.", Category.HUD, true));
+        register(new VisualModule("coords", "Координаты", "Показывает XYZ и направление взгляда.", Category.HUD, true));
+        register(new VisualModule("active_modules", "Активные модули", "Список включённых визуальных функций справа.", Category.HUD, true));
+        register(new VisualModule("armor_hud", "Armor HUD", "Показывает броню и прочность предметов.", Category.HUD, true));
+        register(new VisualModule("crosshair_pulse", "Pulse Crosshair", "Пульсирующий кастомный прицел в центре экрана.", Category.HUD, true));
+        register(new VisualModule("rgb_border", "RGB Border", "Мягкая анимированная рамка по краям экрана.", Category.HUD, true));
+
+        register(new VisualModule("fullbright", "Fullbright", "Повышает яркость картинки на клиенте.", Category.WORLD, false));
+        register(new VisualModule("ambient_tint", "Ambient Tint", "Лёгкий цветной кино-фильтр поверх мира.", Category.WORLD, false));
+        register(new VisualModule("self_glow", "Self Glow", "Подсветка собственного персонажа от третьего лица.", Category.WORLD, false));
+        register(new VisualModule("cinematic_overlay", "Cinematic Overlay", "Полупрозрачная верхняя/нижняя кинематографичная маска.", Category.WORLD, false));
+
+        register(new VisualModule("trail_particles", "Trail Particles", "Косметический след из частиц вокруг игрока.", Category.EFFECTS, true));
+        register(new VisualModule("hit_sparks", "Hit Sparks", "Вспышка частиц при ударе по сущности.", Category.EFFECTS, true));
+        register(new VisualModule("breathing_panel", "Breathing Panels", "Плавная анимация прозрачности панелей.", Category.EFFECTS, true));
+        register(new VisualModule("screen_particles", "Screen Particles", "Маленькие декоративные частицы в меню.", Category.EFFECTS, true));
+
+        register(new VisualModule("mention_notify", "Mention Notify", "Уведомление, если в чате упомянули твой ник.", Category.CHAT, true));
+        register(new VisualModule("keyword_notify", "Keyword Notify", "Уведомления по ключевым словам из конфига.", Category.CHAT, true));
+        register(new VisualModule("chat_sound", "Chat Sound", "Звук при упоминании или ключевом слове.", Category.CHAT, true));
+
+        register(new VisualModule("safe_mode", "Safe Visuals", "Оставляет мод клиентским и без серверных обходов.", Category.QUALITY, true));
+        register(new VisualModule("performance_mode", "Performance Mode", "Ограничивает частоту частиц на слабых ПК.", Category.QUALITY, true));
+    }
+
+    private static void register(VisualModule module) {
+        MODULES.add(module);
+        BY_CATEGORY.computeIfAbsent(module.category(), c -> new ArrayList<>()).add(module);
+    }
+
+    public static List<VisualModule> all() {
+        return Collections.unmodifiableList(MODULES);
+    }
+
+    public static List<VisualModule> byCategory(Category category) {
+        return Collections.unmodifiableList(BY_CATEGORY.getOrDefault(category, List.of()));
+    }
+
+    public static Optional<VisualModule> find(String id) {
+        String normalized = id.toLowerCase(Locale.ROOT);
+        return MODULES.stream().filter(m -> m.id().equals(normalized)).findFirst();
+    }
+
+    public static boolean enabled(String id) {
+        return find(id).map(VisualModule::enabled).orElse(false);
+    }
+
+    public static List<VisualModule> enabledModules() {
+        return MODULES.stream().filter(VisualModule::enabled).toList();
+    }
+}

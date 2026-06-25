@@ -1,0 +1,19 @@
+package ru.nauzer.visuals.feature;
+
+public enum Category {
+    HUD("HUD"),
+    WORLD("Мир"),
+    EFFECTS("Эффекты"),
+    CHAT("Чат"),
+    QUALITY("Качество");
+
+    private final String title;
+
+    Category(String title) {
+        this.title = title;
+    }
+
+    public String title() {
+        return title;
+    }
+}

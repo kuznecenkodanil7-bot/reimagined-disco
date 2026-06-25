@@ -1,0 +1,89 @@
+package ru.nauzer.visuals.render;
+
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.entity.Entity;
+import net.minecraft.particle.ParticleTypes;
+import ru.nauzer.visuals.NauzerVisualsClient;
+import ru.nauzer.visuals.feature.ModuleRegistry;
+
+import java.util.Random;
+
+public final class VisualEffects {
+    private static final Random RANDOM = new Random();
+    private static Double oldGamma;
+    private static int particleDelay;
+
+    private VisualEffects() {
+    }
+
+    public static void tick(MinecraftClient client) {
+        if (client == null || client.player == null || client.world == null) {
+            return;
+        }
+
+        applyFullbright(client);
+        applySelfGlow(client);
+        tickTrail(client);
+    }
+
+    public static void restore(MinecraftClient client) {
+        if (client == null || client.options == null) return;
+        if (oldGamma != null) {
+            client.options.getGamma().setValue(oldGamma);
+            oldGamma = null;
+        }
+        if (client.player != null) {
+            client.player.setGlowing(false);
+        }
+    }
+
+    public static void spawnHitSparks(Entity entity) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null || entity == null || !ModuleRegistry.enabled("hit_sparks")) return;
+
+        for (int i = 0; i < 18; i++) {
+            double x = entity.getX() + (RANDOM.nextDouble() - 0.5) * entity.getWidth();
+            double y = entity.getY() + entity.getHeight() * 0.5 + (RANDOM.nextDouble() - 0.5) * entity.getHeight();
+            double z = entity.getZ() + (RANDOM.nextDouble() - 0.5) * entity.getWidth();
+            double vx = (RANDOM.nextDouble() - 0.5) * 0.08;
+            double vy = RANDOM.nextDouble() * 0.07;
+            double vz = (RANDOM.nextDouble() - 0.5) * 0.08;
+            client.world.addParticle(ParticleTypes.CRIT, x, y, z, vx, vy, vz);
+        }
+    }
+
+    private static void applyFullbright(MinecraftClient client) {
+        if (ModuleRegistry.enabled("fullbright")) {
+            if (oldGamma == null) {
+                oldGamma = client.options.getGamma().getValue();
+            }
+            client.options.getGamma().setValue(16.0D);
+        } else if (oldGamma != null) {
+            client.options.getGamma().setValue(oldGamma);
+            oldGamma = null;
+        }
+    }
+
+    private static void applySelfGlow(MinecraftClient client) {
+        if (client.player != null) {
+            client.player.setGlowing(ModuleRegistry.enabled("self_glow"));
+        }
+    }
+
+    private static void tickTrail(MinecraftClient client) {
+        if (!ModuleRegistry.enabled("trail_particles")) return;
+        if (ModuleRegistry.enabled("performance_mode")) {
+            particleDelay++;
+            int divider = Math.max(2, 8 - NauzerVisualsClient.CONFIG.particleRate);
+            if (particleDelay % divider != 0) return;
+        }
+
+        int amount = Math.max(1, Math.min(10, NauzerVisualsClient.CONFIG.particleRate));
+        for (int i = 0; i < amount; i++) {
+            double x = client.player.getX() + (RANDOM.nextDouble() - 0.5) * 0.55;
+            double y = client.player.getY() + 0.15 + RANDOM.nextDouble() * 0.35;
+            double z = client.player.getZ() + (RANDOM.nextDouble() - 0.5) * 0.55;
+            client.world.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.012, 0.0);
+        }
+    }
+}

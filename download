@@ -1,0 +1,11 @@
+package ru.nauzer.visuals.render;
+
+public record Notification(String title, String body, long createdAt, long durationMs) {
+    public float progress(long now) {
+        return Math.max(0.0f, Math.min(1.0f, (now - createdAt) / (float) durationMs));
+    }
+
+    public boolean expired(long now) {
+        return now - createdAt > durationMs;
+    }
+}

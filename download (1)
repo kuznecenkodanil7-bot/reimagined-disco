@@ -1,0 +1,168 @@
+package ru.nauzer.visuals.render;
+
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.item.ItemStack;
+import ru.nauzer.visuals.NauzerVisualsClient;
+import ru.nauzer.visuals.feature.ModuleRegistry;
+import ru.nauzer.visuals.feature.VisualModule;
+import ru.nauzer.visuals.util.ColorUtil;
+
+import java.util.Iterator;
+import java.util.List;
+
+public final class HudOverlay {
+    private HudOverlay() {
+    }
+
+    public static void render(DrawContext context) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.player == null || client.options.hudHidden) return;
+
+        int width = client.getWindow().getScaledWidth();
+        int height = client.getWindow().getScaledHeight();
+        long now = System.currentTimeMillis();
+
+        if (ModuleRegistry.enabled("ambient_tint")) {
+            context.fill(0, 0, width, height, 0x151E0B05);
+        }
+
+        if (ModuleRegistry.enabled("cinematic_overlay")) {
+            int bar = Math.max(16, height / 12);
+            context.fill(0, 0, width, bar, 0xAA000000);
+            context.fill(0, height - bar, width, height, 0xAA000000);
+        }
+
+        if (ModuleRegistry.enabled("rgb_border")) {
+            int color = ColorUtil.pulse(NauzerVisualsClient.CONFIG.accentStart, NauzerVisualsClient.CONFIG.accentEnd, now, 450.0f);
+            int soft = ColorUtil.withAlpha(color, 115);
+            context.fill(0, 0, width, 2, soft);
+            context.fill(0, height - 2, width, height, soft);
+            context.fill(0, 0, 2, height, soft);
+            context.fill(width - 2, 0, width, height, soft);
+        }
+
+        if (ModuleRegistry.enabled("clean_hud")) {
+            drawMainPanel(context, client, now);
+        }
+
+        if (ModuleRegistry.enabled("active_modules")) {
+            drawActiveModules(context, client, width, now);
+        }
+
+        if (ModuleRegistry.enabled("armor_hud")) {
+            drawArmorHud(context, client, width, height);
+        }
+
+        if (ModuleRegistry.enabled("crosshair_pulse")) {
+            drawCrosshair(context, width, height, now);
+        }
+
+        drawNotifications(context, client, width, height, now);
+    }
+
+    private static void drawMainPanel(DrawContext context, MinecraftClient client, long now) {
+        TextRenderer tr = client.textRenderer;
+        int x = NauzerVisualsClient.CONFIG.hudX;
+        int y = NauzerVisualsClient.CONFIG.hudY;
+        int w = 162;
+        int h = ModuleRegistry.enabled("coords") ? 62 : 42;
+        int accent = ColorUtil.pulse(NauzerVisualsClient.CONFIG.accentStart, NauzerVisualsClient.CONFIG.accentEnd, now, 500.0f);
+
+        context.fill(x, y, x + w, y + h, 0xAA090909);
+        context.fill(x, y, x + 3, y + h, accent);
+        context.fill(x, y, x + w, y + 1, ColorUtil.withAlpha(accent, 180));
+
+        context.drawText(tr, "Nauzer Visuals", x + 10, y + 7, 0xFFFFFFFF, true);
+        context.drawText(tr, "Fabric 1.21.11", x + 10, y + 20, 0xFFB8B8B8, true);
+
+        if (ModuleRegistry.enabled("coords") && client.player != null) {
+            int px = (int) Math.floor(client.player.getX());
+            int py = (int) Math.floor(client.player.getY());
+            int pz = (int) Math.floor(client.player.getZ());
+            String facing = client.player.getHorizontalFacing().getName().toUpperCase();
+            context.drawText(tr, "XYZ: " + px + " / " + py + " / " + pz, x + 10, y + 37, 0xFFEFEFEF, true);
+            context.drawText(tr, "View: " + facing, x + 10, y + 50, 0xFFB8B8B8, true);
+        }
+    }
+
+    private static void drawActiveModules(DrawContext context, MinecraftClient client, int width, long now) {
+        TextRenderer tr = client.textRenderer;
+        List<VisualModule> enabled = ModuleRegistry.enabledModules();
+        int line = 0;
+        int accent = ColorUtil.pulse(NauzerVisualsClient.CONFIG.accentStart, NauzerVisualsClient.CONFIG.accentEnd, now, 420.0f);
+
+        for (VisualModule module : enabled) {
+            if (module.id().equals("safe_mode")) continue;
+            String text = module.name();
+            int textWidth = tr.getWidth(text);
+            int x = width - textWidth - 12;
+            int y = 8 + line * 11;
+            context.fill(x - 4, y - 2, width - 6, y + 9, 0x66000000);
+            context.fill(width - 8, y - 2, width - 6, y + 9, accent);
+            context.drawText(tr, text, x, y, 0xFFE8E8E8, true);
+            line++;
+            if (line > 18) break;
+        }
+    }
+
+    private static void drawArmorHud(DrawContext context, MinecraftClient client, int width, int height) {
+        if (client.player == null) return;
+        int x = width / 2 - 44;
+        int y = height - 58;
+        int slot = 0;
+        for (ItemStack stack : client.player.getArmorItems()) {
+            if (stack.isEmpty()) continue;
+            int drawX = x + slot * 22;
+            context.fill(drawX - 2, y - 2, drawX + 18, y + 18, 0x66000000);
+            context.drawItem(stack, drawX, y);
+            context.drawItemInSlot(client.textRenderer, stack, drawX, y);
+            if (stack.isDamageable()) {
+                int max = Math.max(1, stack.getMaxDamage());
+                int left = max - stack.getDamage();
+                int color = left < max * 0.25 ? 0xFFFF5555 : 0xFF55FF55;
+                context.drawText(client.textRenderer, String.valueOf(left), drawX, y + 18, color, true);
+            }
+            slot++;
+        }
+    }
+
+    private static void drawCrosshair(DrawContext context, int width, int height, long now) {
+        int cx = width / 2;
+        int cy = height / 2;
+        float pulse = (float) ((Math.sin(now / 130.0) + 1.0) / 2.0);
+        int gap = 4 + Math.round(pulse * 2.0f);
+        int len = 5;
+        int color = ColorUtil.pulse(0xFFFFFFFF, NauzerVisualsClient.CONFIG.accentStart, now, 350.0f);
+        context.fill(cx - gap - len, cy, cx - gap, cy + 1, color);
+        context.fill(cx + gap, cy, cx + gap + len, cy + 1, color);
+        context.fill(cx, cy - gap - len, cx + 1, cy - gap, color);
+        context.fill(cx, cy + gap, cx + 1, cy + gap + len, color);
+    }
+
+    private static void drawNotifications(DrawContext context, MinecraftClient client, int width, int height, long now) {
+        Iterator<Notification> iterator = NauzerVisualsClient.NOTIFICATIONS.iterator();
+        int offset = 0;
+        while (iterator.hasNext()) {
+            Notification notification = iterator.next();
+            if (notification.expired(now)) {
+                iterator.remove();
+                continue;
+            }
+            float progress = notification.progress(now);
+            int boxWidth = 210;
+            int boxHeight = 42;
+            int x = width - boxWidth - 10;
+            int y = height - 62 - offset;
+            int alpha = progress < 0.12f ? (int) (210 * (progress / 0.12f)) : 210;
+            int bg = ColorUtil.argb(alpha, 7, 7, 7);
+            int accent = ColorUtil.pulse(NauzerVisualsClient.CONFIG.accentStart, NauzerVisualsClient.CONFIG.accentEnd, now, 420.0f);
+            context.fill(x, y, x + boxWidth, y + boxHeight, bg);
+            context.fill(x, y, x + 3, y + boxHeight, accent);
+            context.drawText(client.textRenderer, notification.title(), x + 10, y + 8, 0xFFFFFFFF, true);
+            context.drawText(client.textRenderer, notification.body(), x + 10, y + 23, 0xFFBDBDBD, true);
+            offset += boxHeight + 6;
+        }
+    }
+}
