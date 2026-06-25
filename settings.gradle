@@ -1,18 +1,17 @@
-package ru.nauzer.visuals.mixin;
-
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.InGameHud;
-import net.minecraft.client.render.RenderTickCounter;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import ru.nauzer.visuals.render.HudOverlay;
-
-@Mixin(InGameHud.class)
-public abstract class InGameHudMixin {
-    @Inject(method = "render", at = @At("TAIL"))
-    private void nauzerVisuals$render(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
-        HudOverlay.render(context);
+pluginManagement {
+    repositories {
+        maven { url = 'https://maven.fabricmc.net/' }
+        mavenCentral()
+        gradlePluginPortal()
     }
 }
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven { url = 'https://maven.fabricmc.net/' }
+    }
+}
+
+rootProject.name = 'nauzer-visuals-1.21.11'
